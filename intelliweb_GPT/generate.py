@@ -1,31 +1,60 @@
-from tqdm import tqdm
 from datetime import date
-from langchain.prompts import PromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI
-
-from llama_index import GPTListIndex, Document, ServiceContext, LLMPredictor, QuestionAnswerPrompt, RefinePrompt
-from langchain.chat_models import ChatOpenAI
-from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.output_parsers import PydanticOutputParser, RetryWithErrorOutputParser
-from pydantic import BaseModel, Field, validator
-from googlesearch import search
 from GoogleNews import GoogleNews
-from json import JSONDecodeError
-from typing import List
+from googlesearch import search
+from langchain.chat_models import ChatOpenAI
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
+from llama_index import Document, GPTListIndex, LLMPredictor, ServiceContext, QuestionAnswerPrompt, RefinePrompt
+from pydantic import BaseModel, Field
+from tqdm import tqdm
+
 from intelliweb_GPT.text_extractors import extract_text_from_web_page
 
+__all__ = ['generate_answer']
 
-# Define your desired data structure.
+
 class SearchHelper(BaseModel):
     action: str = Field(description="source to use to best answer user query")
     search_query: str = Field(
         description="optimal search query to use to get best results for user query in case of web search, else return NA")
 
 
-# Set up a parser + inject instructions into the prompt template.
+def generate_answer(query: str):
+    _input = prompt.format_prompt(query=query)
+    output = chat_model(_input.to_messages())
+    try:
+        parsed_output = parser.parse(output.content)
+        tool_to_use = parsed_output.action
+    except:
+        print('failed...')
+        parsed_output = None
+        tool_to_use = 'llm'
+
+    if tool_to_use in ['Google News Search', 'Google Web Search']:
+        search_query = parsed_output.search_query
+        print(f"Using {tool_to_use} and searching for '{search_query}'...!")
+        if tool_to_use == "Google News Search":
+            googlenews = GoogleNews()
+            googlenews.search(search_query)
+            urls = [data['link'] for data in googlenews.results(sort=True)[:5]]
+            googlenews.clear()
+        else:
+            res = search(search_query, num_results=5)
+            urls = [r for r in res]
+
+        text_contents = [extract_text_from_web_page(url) for url in tqdm(urls)]
+        text_contents = [text_content for text_content in text_contents if str(text_content) != "nan"]
+        index = GPTListIndex.from_documents([Document(text_content) for text_content in text_contents],
+                                            service_context=service_context)
+        response = index.query(query, response_mode="tree_summarize", use_async=True,
+                               text_qa_template=SUMMARY_PROMPT, refine_template=REFINE_SUMMARY_PROMPT_CHAT)
+        return {"answer": response.response.strip(), "references": urls}
+    else:
+        print("Need to use LLM to get answer...")
+        raise NotImplementedError("Not implemented answer generation with LLM model directly yet...")
+
+
 parser = PydanticOutputParser(pydantic_object=SearchHelper)
-retry_parser = RetryWithErrorOutputParser.from_llm(parser=parser, llm=OpenAI(temperature=0))
 
 init_template = (
     "Based on the user query, decide on what source to use. Your possible sources are given below:\n"
@@ -59,7 +88,6 @@ SUMMARY_PROMPT_TMPL = (
 )
 SUMMARY_PROMPT = QuestionAnswerPrompt(SUMMARY_PROMPT_TMPL)
 
-# Refine Summary Prompt for gpt-3.5-turbo/gpt-4 model
 CHAT_REFINE_SUMMARY_PROMPT_TMPL_MSGS = [
     HumanMessagePromptTemplate.from_template("{query_str}"),
     AIMessagePromptTemplate.from_template("{existing_answer}"),
@@ -80,40 +108,3 @@ REFINE_SUMMARY_PROMPT_CHAT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_SUMM
 
 llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo'))
 service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor)
-
-
-# TODO: Implement LLM answer generation
-def generate_answer(query: str):
-    _input = prompt.format_prompt(query=query)
-    output = chat_model(_input.to_messages())
-    try:
-        parsed_output = parser.parse(output.content)
-        tool_to_use = parsed_output.action
-    except:
-        print('failed...')
-        parsed_output = None
-        tool_to_use = 'llm'
-
-    if tool_to_use in ['Google News Search', 'Google Web Search']:
-        search_query = parsed_output.search_query
-        print(f"Using {tool_to_use} and searching for '{search_query}'...!")
-        if tool_to_use == "Google News Search":
-            googlenews = GoogleNews()
-            googlenews.search(search_query)
-            urls = []
-            urls = [data['link'] for data in googlenews.results(sort=True)[:5]]
-            googlenews.clear()
-        else:
-            res = search(search_query, num_results=5)
-            urls = [r for r in res]
-
-        text_contents = [extract_text_from_web_page(url) for url in tqdm(urls)]
-        text_contents = [text_content for text_content in text_contents if str(text_content) != "nan"]
-        index = GPTListIndex.from_documents([Document(text_content) for text_content in text_contents],
-                                            service_context=service_context)
-        response = index.query(query, response_mode="tree_summarize", use_async=True,
-                               text_qa_template=SUMMARY_PROMPT, refine_template=REFINE_SUMMARY_PROMPT_CHAT)
-        return {"answer": response.response.strip(), "references": urls}
-    else:
-        print("Need to use LLM to get answer...")
-        raise NotImplementedError("Not implemented answer generation with LLM model directly yet...")
