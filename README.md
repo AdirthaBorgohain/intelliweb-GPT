@@ -31,7 +31,7 @@ First install all libraries and modules mentioned in requirements.txt:
 pip install -r requirements.txt
 ```
 
-In the `.env` file, replace `sk-XXXXXXX` with your own OpenAI API key.
+In the `.env` file, replace the `OPENAI_API_KEY` ENV variable's value with your own OpenAI API key.
 
 Next, here's a simple example of how you can use Intelliweb-GPT:
 
