@@ -3,7 +3,8 @@ from GoogleNews import GoogleNews
 from googlesearch import search
 from intelliweb_GPT.tool_picker import get_best_tool
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate, \
+    SystemMessagePromptTemplate
 from llama_index import Document, GPTListIndex, LLMPredictor, ServiceContext, QuestionAnswerPrompt, RefinePrompt
 from tqdm import tqdm
 
@@ -33,9 +34,17 @@ def generate_answer(query: str):
                                text_qa_template=SUMMARY_PROMPT, refine_template=REFINE_SUMMARY_PROMPT_CHAT)
         return {"answer": response.response.strip(), "references": urls}
     else:
-        print("Need to use LLM to get answer...")
-        raise NotImplementedError("Not implemented answer generation with LLM model directly yet...")
+        print(f"Using {tool_to_use} to generate your response...!")
+        chat_prompt = ChatPromptTemplate.from_messages([SystemMessagePromptTemplate.from_template(SYSTEM_CHAT_TMPL),
+                                                        HumanMessagePromptTemplate.from_template(query)])
+        res = chat_model(chat_prompt.format_prompt(query=query).to_messages())
+        return {"answer": res.content.strip()}
 
+
+SYSTEM_CHAT_TMPL = (
+    "You are a helpful answering assistant that can answer user queries on any topic. Respond in a very comprehensive, "
+    "very informative and detailed manner"
+)
 
 SUMMARY_PROMPT_TMPL = (
     "Based on the provided web search results below. \n"
@@ -68,5 +77,6 @@ CHAT_REFINE_SUMMARY_PROMPT_TMPL_MSGS = [
 CHAT_REFINE_SUMMARY_PROMPT_LC = ChatPromptTemplate.from_messages(CHAT_REFINE_SUMMARY_PROMPT_TMPL_MSGS)
 REFINE_SUMMARY_PROMPT_CHAT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_SUMMARY_PROMPT_LC)
 
-llm_predictor = LLMPredictor(llm=ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo'))
+chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo')
+llm_predictor = LLMPredictor(llm=chat_model)
 service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor)
