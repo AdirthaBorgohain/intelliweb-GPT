@@ -1,4 +1,4 @@
-# Intelliweb-GPT
+# Intelliweb-GPT [WIP]
 
 Intelliweb-GPT is an intelligent search engine / Question Answering module that uses GPT technology to provide accurate and relevant answers to user queries. The search engine can search multiple sources, including Google News and Google Web, to generate answers, and can also directly answer general user queries using GPT's existing knowledge. With GPT connected to the internet, it's basically GPT on steroids!
 
@@ -79,6 +79,6 @@ Contributions to Intelliweb-GPT are welcome! To contribute, please follow these 
 
 Intelliweb-GPT is licensed under the MIT License. See LICENSE for more information.
 
-![Llama-Index](https://img.shields.io/badge/Llama--Index-4630EB?style=for-the-badge&logo=ethereum&logoColor=white)
+![Llama-Index](https://img.shields.io/badge/Llama--Index-4630EB?style=for-the-badge&logo=python&logoColor=white)
 ![Langchain](https://img.shields.io/badge/Langchain-121212?style=for-the-badge&logo=python&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/OpenAI-FF6F00?style=for-the-badge&logo=openai&logoColor=white)
