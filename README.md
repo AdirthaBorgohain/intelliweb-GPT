@@ -11,14 +11,18 @@ Intelliweb-GPT provides the following features:
 - Intelligent decision-making: The module breaks down the user query to intelligently decide whether to use GPT's existing knowledge or external sources to generate answers.
 - Easy-to-use API: Intelliweb-GPT provides a simple API that developers can use to integrate the search engine into their own applications.
 
-## Installation 🔭
+[//]: # (## Installation 🔭)
 
-You can install Intelliweb-GPT via pip:
+[//]: # ()
+[//]: # (You can install Intelliweb-GPT via pip:)
 
-```shell
-pip install intelliweb_GPT
+[//]: # ()
+[//]: # (```shell)
 
-```
+[//]: # (pip install intelliweb_GPT)
+
+[//]: # ()
+[//]: # (```)
 
 ## Example Usage 💻 
 
