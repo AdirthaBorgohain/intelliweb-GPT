@@ -1,4 +1,4 @@
-# Intelliweb-GPT [WIP]
+# Intelliweb-GPT
 
 Intelliweb-GPT is an intelligent search engine / Question Answering module that uses GPT technology to provide accurate and relevant answers to user queries. The search engine can search multiple sources, including Google News and Google Web, to generate answers, and can also directly answer general user queries using GPT's existing knowledge. With GPT connected to the internet, it's basically GPT on steroids!
 
@@ -31,7 +31,7 @@ First install all libraries and modules mentioned in requirements.txt:
 pip install -r requirements.txt
 ```
 
-In the `.env` file, replace `sk-XXXXXXX` with your own OpenAI API key.
+In the `.env` file, replace the `OPENAI_API_KEY` ENV variable's value with your own OpenAI API key.
 
 Next, here's a simple example of how you can use Intelliweb-GPT:
 
