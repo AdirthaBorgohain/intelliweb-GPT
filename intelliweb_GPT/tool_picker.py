@@ -12,7 +12,7 @@ class SearchHelper(BaseModel):
 
 tool_picker_template = (
     "Based on the user query, decide on what source to use. Your possible sources are given below:\n"
-    "1. LLM Model: Useful when query is complex, and requires analytical/logical reasoning and does not need recent data. Also useful for general conversational queries.\n"
+    "1. LLM Model: Useful when query is complex, and requires analytical or logical reasoning and does not need recent data. Also useful for general conversational queries.\n"
     "If query is related to time-sensitive information, recent developments, or needs current data, choose one of the web search sources:\n"
     "2. Google Web Search\n"
     "3. Google News Search\n\n"

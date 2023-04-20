@@ -1,14 +1,15 @@
+import asyncio
 from datetime import date
 from GoogleNews import GoogleNews
 from googlesearch import search
 from intelliweb_GPT.tool_picker import get_best_tool
 from langchain.chat_models import ChatOpenAI
+from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.prompts.chat import AIMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate, \
     SystemMessagePromptTemplate
-from llama_index import Document, GPTListIndex, LLMPredictor, ServiceContext, QuestionAnswerPrompt, RefinePrompt
-from tqdm import tqdm
-
-from intelliweb_GPT.text_extractors import extract_text_from_web_page
+from llama_index.readers import TrafilaturaWebReader
+from llama_index import GPTSimpleVectorIndex, LangchainEmbedding, LLMPredictor, ServiceContext, \
+    QuestionAnswerPrompt, RefinePrompt
 
 __all__ = ['generate_answer']
 
@@ -22,16 +23,22 @@ def generate_answer(query: str):
             googlenews.search(search_query)
             urls = [data['link'] for data in googlenews.results(sort=True)[:5]]
             googlenews.clear()
+            QA_PROMPT = QuestionAnswerPrompt(QA_PROMPT_NEWS_TMPL)
+            CHAT_REFINE_QA_PROMPT_LC = ChatPromptTemplate.from_messages(CHAT_REFINE_QA_PROMPT_NEWS_TMPL_MSGS)
+            REFINE_QA_PROMPT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_QA_PROMPT_LC)
         else:
             res = search(search_query, num_results=5)
             urls = [r for r in res]
+            QA_PROMPT = QuestionAnswerPrompt(QA_PROMPT_WEB_TMPL)
+            CHAT_REFINE_QA_PROMPT_LC = ChatPromptTemplate.from_messages(CHAT_REFINE_QA_PROMPT_WEB_TMPL_MSGS)
+            REFINE_QA_PROMPT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_QA_PROMPT_LC)
 
-        text_contents = [extract_text_from_web_page(url) for url in tqdm(urls)]
-        text_contents = [text_content for text_content in text_contents if str(text_content) != "nan"]
-        index = GPTListIndex.from_documents([Document(text_content) for text_content in text_contents[:5]],
-                                            service_context=service_context)
-        response = index.query(query, response_mode="tree_summarize", use_async=True,
-                               text_qa_template=SUMMARY_PROMPT, refine_template=REFINE_SUMMARY_PROMPT_CHAT)
+        documents = reader.load_data(urls=urls)
+        index = GPTSimpleVectorIndex.from_documents(documents, use_async=True, service_context=service_context)
+        response = asyncio.run(
+            index.aquery(query, response_mode='tree_summarize', similarity_top_k=5,
+                         text_qa_template=QA_PROMPT, refine_template=REFINE_QA_PROMPT)
+        )
         return {"answer": response.response.strip(), "references": urls}
     else:
         print(f"Using {tool_to_use} to generate your response...!")
@@ -41,42 +48,74 @@ def generate_answer(query: str):
         return {"answer": res.content.strip()}
 
 
-SYSTEM_CHAT_TMPL = (
-    "You are a helpful answering assistant that can answer user queries on any topic. Respond in a very comprehensive, "
-    "very informative and detailed manner"
-)
-
-SUMMARY_PROMPT_TMPL = (
+QA_PROMPT_NEWS_TMPL = (
     "Based on the provided web search results below. \n"
     "------------\n"
     "{context_str}\n"
     "\n------------\n"
-    "Generate a comprehensive, very informative and detailed response (but not more than 100 words) "
+    "Generate a comprehensive, very informative and detailed response (but not more than 150 words) "
     "to answer the question below. Your response must solely based on the provided web search results above. \n"
     "Combine search results together into a coherent answer. Do not repeat text.\n"
-    f"Today's date is: {str(date.today())} and use this as your reference point.\n"
+    f"For your reference, today's date is: {str(date.today())}.\n"
     "{query_str}\n"
 )
-SUMMARY_PROMPT = QuestionAnswerPrompt(SUMMARY_PROMPT_TMPL)
 
-CHAT_REFINE_SUMMARY_PROMPT_TMPL_MSGS = [
+QA_PROMPT_WEB_TMPL = (
+    "You are asked to provide answer to the question below. \n"
+    "{query_str}\n"
+    "Generate a very comprehensive, informative and detailed response (but not more than 150 words)"
+    "based on your extensive training knowledge. Do not repeat text.\n"
+    "If needed, you can use the additional context below to better your answer.\n"
+    "------------\n"
+    "{context_str}\n"
+    "\n------------\n"
+    f"For your reference, today's date is: {str(date.today())} and context provided is up-to-date.\n"
+)
+
+# Refine QA Prompt for gpt-3.5-turbo/gpt-4 model
+CHAT_REFINE_QA_PROMPT_NEWS_TMPL_MSGS = [
     HumanMessagePromptTemplate.from_template("{query_str}"),
     AIMessagePromptTemplate.from_template("{existing_answer}"),
     HumanMessagePromptTemplate.from_template(
-        "We have the opportunity to refine the above answer "
+        "You have the opportunity to refine your above answer "
         "(only if needed) with some more context below extracted from web search results.\n"
         "------------\n"
         "{context_msg}\n"
         "------------\n"
         "Given the new context, refine the original answer to better "
-        "answer the question (but not more than 100 words). Make sure everything you say is supported by the web search results."
-        "Answer in a comprehensive, very informative and detailed manner. Do not repeat text. "
+        "answer the question (but not more than 150 words). Make sure everything you say is supported by the web "
+        "search results. Answer in a comprehensive, very informative and detailed manner. Do not repeat text. "
         "If the context isn't useful, output the original answer again.",
     ),
 ]
-CHAT_REFINE_SUMMARY_PROMPT_LC = ChatPromptTemplate.from_messages(CHAT_REFINE_SUMMARY_PROMPT_TMPL_MSGS)
-REFINE_SUMMARY_PROMPT_CHAT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_SUMMARY_PROMPT_LC)
 
-chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo')
+SYSTEM_CHAT_TMPL = (
+    "You are a helpful answering assistant that can answer user queries on any topic. Respond in a very "
+    "comprehensive, informative and detailed manner"
+)
+
+CHAT_REFINE_QA_PROMPT_WEB_TMPL_MSGS = [
+    SystemMessagePromptTemplate.from_template(
+        SYSTEM_CHAT_TMPL
+    ),
+    HumanMessagePromptTemplate.from_template("{query_str}"),
+    AIMessagePromptTemplate.from_template("{existing_answer}"),
+    HumanMessagePromptTemplate.from_template(
+        "You have the opportunity to refine your above answer "
+        "(only if needed) with some more context below extracted from web search results.\n"
+        "------------\n"
+        "{context_msg}\n"
+        "------------\n"
+        "Given the new context and your prior knowledge, you can refine the original answer if "
+        "anything new and relevant to the answer can be added. Make sure your answer is not more than 150 words. "
+        "Answer in a comprehensive, very informative and detailed manner. Do not repeat text. Do not mention the usage "
+        "of this additional context anywhere in your answer. If the context isn't useful, output the original answer "
+        "again.",
+    ),
+]
+
+chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo', max_tokens=512)
+embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name='multi-qa-MiniLM-L6-cos-v1'))
 llm_predictor = LLMPredictor(llm=chat_model)
-service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor)
+service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, embed_model=embed_model)
+reader = TrafilaturaWebReader()
