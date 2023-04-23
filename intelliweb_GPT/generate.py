@@ -2,9 +2,9 @@ import os
 import json
 import asyncio
 import requests
-from prompts import *
 from GoogleNews import GoogleNews
 from googlesearch import search
+from intelliweb_GPT.prompts import *
 from intelliweb_GPT.tool_picker import get_best_tool
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
@@ -82,7 +82,7 @@ def generate_answer(query: str, use_serper_api: bool = False):
         return {"answer": res.content.strip()}
 
 
-chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-3.5-turbo', max_tokens=512)
+chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-4', max_tokens=512)
 embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name='multi-qa-MiniLM-L6-cos-v1'))
 llm_predictor = LLMPredictor(llm=chat_model)
 service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, embed_model=embed_model)
