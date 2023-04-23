@@ -2,6 +2,8 @@ import os
 import json
 import asyncio
 import requests
+import trafilatura
+from trafilatura.settings import use_config
 from GoogleNews import GoogleNews
 from googlesearch import search
 from intelliweb_GPT.prompts import *
@@ -10,13 +12,32 @@ from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate, \
     SystemMessagePromptTemplate
-from llama_index.readers import TrafilaturaWebReader
+
+from llama_index import Document
 from llama_index import GPTSimpleVectorIndex, LangchainEmbedding, LLMPredictor, ServiceContext, \
     QuestionAnswerPrompt, RefinePrompt
 
 __all__ = ['generate_answer']
 serper_url = "https://google.serper.dev"
 serper_api_key = os.getenv("SERPER_API_KEY")
+
+config = use_config()
+config.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
+
+
+async def extract_text(url):
+    downloaded = trafilatura.fetch_url(url)
+    if downloaded:
+        response = trafilatura.extract(downloaded, include_comments=False, include_images=False, config=config)
+        if response:
+            return response
+    return None
+
+
+async def extract_text_from_url(urls):
+    tasks = [extract_text(url) for url in urls]
+    extracted_texts = await asyncio.gather(*tasks)
+    return extracted_texts
 
 
 def get_relevant_urls(query: str, source: str):
@@ -67,7 +88,9 @@ def generate_answer(query: str, use_serper_api: bool = False):
             CHAT_REFINE_QA_PROMPT_LC = ChatPromptTemplate.from_messages(CHAT_REFINE_QA_PROMPT_WEB_TMPL_MSGS)
             REFINE_QA_PROMPT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_QA_PROMPT_LC)
 
-        documents = reader.load_data(urls=urls)
+        extracted_texts = asyncio.run(extract_text_from_url(urls=urls))
+        documents = [Document(text) for text in extracted_texts if text]
+
         index = GPTSimpleVectorIndex.from_documents(documents, use_async=True, service_context=service_context)
         response = asyncio.run(
             index.aquery(query, response_mode='tree_summarize', similarity_top_k=5,
@@ -86,4 +109,3 @@ chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-4', max_tokens=512)
 embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name='multi-qa-MiniLM-L6-cos-v1'))
 llm_predictor = LLMPredictor(llm=chat_model)
 service_context = ServiceContext.from_defaults(llm_predictor=llm_predictor, embed_model=embed_model)
-reader = TrafilaturaWebReader()
