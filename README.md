@@ -1,37 +1,52 @@
 # Intelliweb-GPT
 
-Intelliweb-GPT is an intelligent search engine / Question Answering module that uses GPT technology to provide accurate and relevant answers to user queries. The search engine can search multiple sources, including Google News and Google Web, to generate answers, and can also directly answer general user queries using GPT's existing knowledge. With GPT connected to the internet, it's basically GPT on steroids!
+Intelliweb-GPT is an intelligent search engine / Question Answering module that uses GPT technology to provide accurate
+and relevant answers to user queries. The search engine can search multiple sources, including Google News and Google
+Web, to generate answers, and can also directly answer general user queries using GPT's existing knowledge. With GPT
+connected to the internet, it's basically GPT on steroids!
 
 ## Features 🚀
 
 Intelliweb-GPT provides the following features:
 
-- Multi-source search: The module can connect to the internet and can search Google News and Google Web to generate answers for user queries.
+- Multi-source search: The module can connect to the internet and can search Google News and Google Web to generate
+  answers for user queries.
 - Direct answer generation: Intelliweb-GPT can directly answer general user queries using GPT's existing knowledge.
-- Intelligent decision-making: The module breaks down the user query to intelligently decide whether to use GPT's existing knowledge or external sources to generate answers.
-- Easy-to-use API: Intelliweb-GPT provides a simple API that developers can use to integrate the search engine into their own applications.
+- Intelligent decision-making: The module breaks down the user query to intelligently decide whether to use GPT's
+  existing knowledge or external sources to generate answers.
+- Easy-to-use API: Intelliweb-GPT provides a simple API that developers can use to integrate the search engine into
+  their own applications.
 
 [//]: # (## Installation 🔭)
 
 [//]: # ()
+
 [//]: # (You can install Intelliweb-GPT via pip:)
 
 [//]: # ()
+
 [//]: # (```shell)
 
 [//]: # (pip install intelliweb_GPT)
 
 [//]: # ()
+
 [//]: # (```)
 
-## Example Usage 💻 
+## Example Usage 💻
 
 First install all libraries and modules mentioned in requirements.txt:
+
 ```shell
 pip install -r requirements.txt
 ```
 
 In the `.env` file, replace the `OPENAI_API_KEY` ENV variable's value with your own OpenAI API key.
+
+Also, if you want to use serper API to fetch the relevant articles from the web, get your own API key
+from [here](https://serper.dev/)
+and add your API key to the `SERPER_API_KEY` env variable. While calling the `generate_answer` method, set
+the `use_serper_api` argument to `True`.
 
 Next, here's a simple example of how you can use Intelliweb-GPT:
 
@@ -40,10 +55,11 @@ from pprint import pprint
 from intelliweb_GPT import generate_answer
 
 query = "How did the Super Mario Bros. movie fare at the box office?"
-answer_dict = generate_answer(query)
+answer_dict = generate_answer(query, use_serper_api=False)
 
 pprint(answer_dict)
 ```
+
 Output:
 
 ```bash
@@ -67,7 +83,6 @@ Output:
              'https://www.shacknews.com/article/135069/super-mario-bros-movie-highest-grossing-video-game-film',
              'https://screenrant.com/super-mario-bros-movie-every-box-office-record/']}
 ```
-
 
 ## Contributing 💡
 
