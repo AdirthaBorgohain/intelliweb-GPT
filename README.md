@@ -3,7 +3,7 @@
 Intelliweb-GPT is an intelligent search engine / Question Answering module that uses GPT technology to provide accurate
 and relevant answers to user queries. The search engine can search multiple sources, including Google News and Google
 Web, to generate answers, and can also directly answer general user queries using GPT's existing knowledge. With GPT
-connected to the internet, it's basically GPT on steroids!
+connected to the internet, it's basically GPT on steroids! This is how Bing makes it's searches at the moment when you use Bing Chat.
 
 ## Features 🚀
 
