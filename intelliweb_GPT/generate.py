@@ -14,7 +14,8 @@ from langchain.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplat
     SystemMessagePromptTemplate
 
 from llama_index import Document
-from llama_index import GPTSimpleVectorIndex, LangchainEmbedding, LLMPredictor, ServiceContext, \
+from llama_index.langchain_helpers.text_splitter import TokenTextSplitter
+from llama_index import GPTVectorStoreIndex, LangchainEmbedding, LLMPredictor, ServiceContext, \
     QuestionAnswerPrompt, RefinePrompt
 
 __all__ = ['generate_answer']
@@ -89,13 +90,22 @@ def generate_answer(query: str, use_serper_api: bool = False):
             REFINE_QA_PROMPT = RefinePrompt.from_langchain_prompt(CHAT_REFINE_QA_PROMPT_LC)
 
         extracted_texts = asyncio.run(extract_text_from_url(urls=urls))
-        documents = [Document(text) for text in extracted_texts if text]
+        documents = []
+        for text in extracted_texts:
+            if text:
+                texts = text_splitter.split_text(text)
+                for t in texts:
+                    documents.append(Document(t))
 
-        index = GPTSimpleVectorIndex.from_documents(documents, use_async=True, service_context=service_context)
-        response = asyncio.run(
-            index.aquery(query, response_mode='tree_summarize', similarity_top_k=5,
-                         text_qa_template=QA_PROMPT, refine_template=REFINE_QA_PROMPT)
+        index = GPTVectorStoreIndex.from_documents(documents, use_async=True, service_context=service_context)
+        query_engine = index.as_query_engine(
+            response_mode="tree_summarize",
+            service_context=service_context,
+            similarity_top_k=5,
+            text_qa_template=QA_PROMPT,
+            refine_template=REFINE_QA_PROMPT
         )
+        response = asyncio.run(query_engine.aquery(query))
         return {"answer": response.response.strip(), "references": urls}
     else:
         print(f"Using {tool_to_use} to generate your response...!")
@@ -105,6 +115,7 @@ def generate_answer(query: str, use_serper_api: bool = False):
         return {"answer": res.content.strip()}
 
 
+text_splitter = TokenTextSplitter(separator=" ", chunk_size=1024, chunk_overlap=10)
 chat_model = ChatOpenAI(temperature=0.4, model_name='gpt-4', max_tokens=512)
 embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name='multi-qa-MiniLM-L6-cos-v1'))
 llm_predictor = LLMPredictor(llm=chat_model)
