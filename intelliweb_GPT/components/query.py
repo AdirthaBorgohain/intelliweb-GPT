@@ -14,6 +14,9 @@ class QueryAnswerer:
         self._embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name="multi-qa-MiniLM-L6-cos-v1"))
 
     def _initialize_model(self, model: str, temperature: float):
+        """
+        Initializes the necessary model and service contexts for generating answers
+        """
         max_tokens = 1024 if model == 'gpt-3.5-turbo' else 2048
         chat_model = ChatOpenAI(model_name=model, temperature=temperature, max_tokens=max_tokens, request_timeout=120)
         return chat_model, ServiceContext.from_defaults(llm_predictor=LLMPredictor(llm=chat_model),
@@ -34,6 +37,10 @@ class QueryAnswerer:
 
     def answer_from_documents(self, query: str, documents: List[Document],
                               qa_prompt: str, refine_prompt: List[BaseMessage], **kwargs) -> str:
+        """
+        Given a query and list of documents, it generates answer to the query using the texts from the documents as
+        contest.
+        """
         print("Generating answer from documents..")
         model_params = {
             'model': 'gpt-3.5-turbo',
@@ -55,7 +62,9 @@ class QueryAnswerer:
         return query_results.response.strip()
 
     def answer_from_knowledge(self, query: str, chat_history: List[Dict] = None) -> str:
-
+        """
+        Given a query, it generates answer to the query directly from the LLM model
+        """
         print(f"Generating answer from training knowledge for query: {repr(query)}..")
         model_params = {
             'model': 'gpt-3.5-turbo',

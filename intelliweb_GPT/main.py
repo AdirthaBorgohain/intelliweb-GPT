@@ -1,3 +1,4 @@
+from typing import Dict
 from intelliweb_GPT.prompts import *
 from intelliweb_GPT.components import QueryAnswerer, SourceSelector, WebRetriever, DocumentGetter
 
@@ -7,11 +8,23 @@ web_retriever = WebRetriever()
 document_getter = DocumentGetter()
 
 
-def generate_answer(query: str, use_serper_api: bool = False):
+def generate_answer(query: str, use_serper_api: bool = False) -> Dict | str:
+    """
+    Generates answer for a given user query
+    Args:
+        query: User query
+        use_serper_api: Whether to use serper_api or directly scrape from the search results. Defaults to False.
+
+    Returns:
+        Returns a dictionary with the answer to the query and URL references from the web used to generate the answer
+        (if any)
+    """
     source_to_use, search_query = source_selector.select_optimal_source(query)
     if source_to_use == "LLM Model":
         formatted_chat_history = [{'role': 'system', 'content': SYSTEM_CHAT_TMPL}]
-        return query_answerer.answer_from_knowledge(query, chat_history=formatted_chat_history)
+        return {
+            "answer": query_answerer.answer_from_knowledge(query, chat_history=formatted_chat_history)
+        }
     elif source_to_use == "Google News Search":
         source = 'news'
         QA_PROMPT, CHAT_REFINE_QA_PROMPT_LC = QA_PROMPT_NEWS_TMPL, CHAT_REFINE_QA_PROMPT_NEWS_TMPL_MSGS
@@ -21,8 +34,9 @@ def generate_answer(query: str, use_serper_api: bool = False):
 
     retrieved_urls = web_retriever.retrieve_relevant_urls(search_query, source, use_serper_api)
     documents, references = document_getter.get_documents_from_urls(retrieved_urls)
-    return {"answer": query_answerer.answer_from_documents(query, documents,
-                                                           qa_prompt=QA_PROMPT,
-                                                           refine_prompt=CHAT_REFINE_QA_PROMPT_LC),
-            "references": references
-            }
+    return {
+        "answer": query_answerer.answer_from_documents(query, documents,
+                                                       qa_prompt=QA_PROMPT,
+                                                       refine_prompt=CHAT_REFINE_QA_PROMPT_LC),
+        "references": references
+    }
