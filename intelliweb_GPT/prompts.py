@@ -66,3 +66,14 @@ CHAT_REFINE_QA_PROMPT_WEB_TMPL_MSGS = [
         "again.",
     ),
 ]
+
+SOURCE_SELECTION_PROMPT = (
+    "Based on the user query, decide on what source to use. Your possible sources are given below:\n"
+    "1. LLM Model: Useful for answering conversational queries and for queries related to capabilities of the "
+    "model.\n"
+    "If query is related to time-sensitive information, recent developments, or needs current data, only then "
+    "choose one of the web search sources:\n"
+    "2. Google Web Search: Useful when query asks about a specific topic or for events more than 3 weeks old\n"
+    "3. Google News Search: Useful when query asks about very recent events or news\n\n"
+    "{format_instructions}\n{query}\n"
+)
