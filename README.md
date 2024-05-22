@@ -100,6 +100,12 @@ Contributions to Intelliweb-GPT are welcome! To contribute, please follow these 
 
 Intelliweb-GPT is licensed under the MIT License. See LICENSE for more information.
 
-![Llama-Index](https://img.shields.io/badge/Llama--Index-4630EB?style=for-the-badge&logo=python&logoColor=white)
-![Langchain](https://img.shields.io/badge/Langchain-121212?style=for-the-badge&logo=python&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-FF6F00?style=for-the-badge&logo=openai&logoColor=white)
+### This project is built using:
+
+<a href="https://github.com/run-llama/llama_index" target="_blank">
+    <img alt="Llama Index Logo" src="https://www.llamaindex.ai/llamaindex.svg" width="100"/>
+</a>
+&nbsp&nbsp&nbsp&nbsp
+<a href="https://github.com/Chainlit/chainlit" target="_blank">
+    <img alt="Chainlit Logo" src="https://help.chainlit.io/logo?theme=dark" width="100"/>
+</a>

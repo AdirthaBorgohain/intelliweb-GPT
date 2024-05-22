@@ -1,49 +1,64 @@
-from typing import Tuple
+from typing import Tuple, Literal
 from pydantic import BaseModel, Field
-from intelliweb_GPT.prompts import SOURCE_SELECTION_PROMPT
-from langchain.chat_models import ChatOpenAI
-from langchain.output_parsers import PydanticOutputParser
-from langchain.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate
+
+from intelliweb_GPT.llms import load_llm
+from intelliweb_GPT.prompts import SOURCE_SELECTION
+
+from llama_index.core.llms import LLM
+from llama_index.core.program import LLMTextCompletionProgram
+from llama_index.core.output_parsers import PydanticOutputParser
 
 
 class SearchHelper(BaseModel):
-    source: str = Field(
-        description="source to use to best answer user query"
+    """
+    Pydantic Class that aids in search processes. It consists of two fields - 'source' and 'search_query'.
+    The 'source' signifies the source to be used in generating the answer for the user query whereas 'search_query'
+    represents the most suitable search query for the chosen 'source'.
+    """
+    source: Literal['Google Web Search', 'Google News Search', 'LLM'] = Field(
+        description="Denotes the source employed to provide the most suitable answer for the user query",
+        example="Google Web Search"
     )
     search_query: str = Field(
-        description="optimal search query to use to get best results for user query in case of web search, else return "
-                    "NA"
+        description="Represents the most suitable search query for obtaining the optimum results for the user's web "
+                    "search. In case of no web search, 'NA' is returned. It must not contain any conditional operators "
+                    "such as 'AND', 'OR', etc. and filters like 'site', etc."
     )
 
 
 class SourceSelector:
-    def __init__(self):
-        self._chat_model = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0)
-        self._parser = PydanticOutputParser(pydantic_object=SearchHelper)
-        self._prompt = self._initialize_prompt()
+    """
+    SourceSelector class to select the optimal source for answering user query.
+    """
 
-    def _initialize_prompt(self):
-        return ChatPromptTemplate(
-            messages=[
-                HumanMessagePromptTemplate.from_template(SOURCE_SELECTION_PROMPT)
-            ],
-            input_variables=["query"],
-            partial_variables={"format_instructions": self._parser.get_format_instructions()}
+    def select_optimal_source(self, query: str, model: None | LLM = None) -> Tuple[str, str]:
+        """
+        Select the optimal source to answer the user query.
+
+        Args:
+            query (str): The user query.
+            model (None | LLM): Model to use for selecting the source. If none, loads a gpt-4 model
+
+        Returns:
+            Tuple[str, str]: The selected source and the optimal search query.
+        """
+        llm = model or load_llm(model='gpt-4o')
+
+        program = LLMTextCompletionProgram.from_defaults(
+            output_parser=PydanticOutputParser(SearchHelper),
+            prompt_template_str=SOURCE_SELECTION,
+            llm=llm,
+            verbose=True,
         )
-
-    def select_optimal_source(self, query: str) -> Tuple[str, str]:
-        _input = self._prompt.format_prompt(query=query)
-        output = self._chat_model(_input.to_messages())
         try:
-            parsed_output = self._parser.parse(output.content)
-            print(f"Using source: {repr(parsed_output.source)} with search query: "
-                  f"{repr(parsed_output.search_query)}")
-            return parsed_output.source, parsed_output.search_query
+            output = program(query=query)
+            print(
+                f"Using source: {repr(output.source)} with search query: {repr(output.search_query)}")
+            return output.source, output.search_query
         except:
             print("Failed to pick any source for answering. Defaulting to 'Google Web Search' with "
                   f"search query: {repr(query)}")
-            print(output.content)
-            return "Google Web Search", query
+        return "Google Web Search", query
 
 
 __all__ = ['SourceSelector']
