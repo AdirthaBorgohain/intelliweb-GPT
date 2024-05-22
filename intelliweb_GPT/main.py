@@ -48,7 +48,10 @@ async def generate_answer(query: str, use_serper_api: bool = False, stream: bool
         refine_prompt=create_chat_messages(SYSTEM_MESSAGE, CHAT_REFINE_QA_PROMPT_LC)
     )
     if stream:
-        return response
+        return {
+            "answer_generator": response,
+            "references": references
+        }
     else:
         async for r in response:
             return {

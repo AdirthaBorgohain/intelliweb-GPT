@@ -86,6 +86,18 @@ Output:
              'https://screenrant.com/super-mario-bros-movie-every-box-office-record/']}
 ```
 
+### GUI
+
+There is also a GUI available to interact with intelliweb-GPT. UI is created using chainlit and this can be run by
+using the command below:
+
+```shell
+PYTHONPATH=$PWD chainlit run chainlit_app/app.py
+```
+
+Demo of how the Chainlit UI works with intelliweb-GPT:
+![](assets/chainlit_demo.gif)
+
 ## Contributing 💡
 
 Contributions to Intelliweb-GPT are welcome! To contribute, please follow these steps:

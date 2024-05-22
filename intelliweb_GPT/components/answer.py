@@ -37,7 +37,7 @@ class QueryAnswerer:
 
         async def _response_stream():
             query_results = await query_engine.aquery(query)
-            for token in query_results.response_gen:
+            async for token in query_results.async_response_gen():
                 yield token
 
         async def _response():
